@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffe699">
+<meta name="description" content="작은 행복을 꽃말로 가진 순무가 3D로 회전하는 모바일 페이지">
+<title>순무</title>
+<style>
+  /* base reset */
+  :root{padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px)}
+  body{margin:0;font-size:14px}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#ffe699;
+    --ink:#1c2a21;
+    --muted:#5f6656;
+    --pink:#e0487c;
+    --leaf:#1f4d2b;
+    --line:rgba(28,42,33,.14);
+    color-scheme:light;
+  }
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"Gowun Dodum",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    padding-inline:20px;box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .page{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:8px;padding-block:22px calc(76px + env(safe-area-inset-bottom, 0px));box-sizing:border-box}
+  header{display:flex;flex-direction:column;gap:6px}
+  .eyebrow{font:500 11px/1.4 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .eyebrow i{font-style:italic;text-transform:none;letter-spacing:.02em}
+  h1{margin:0;font:700 clamp(44px,14vw,64px)/1 "Gowun Batang",serif;letter-spacing:-.02em;text-wrap:balance}
+  h1 span{color:var(--pink)}
+  .stage{position:relative;flex:1;margin-inline:-20px;overflow:hidden;min-height:360px;touch-action:none;cursor:grab}
+  .stage:active{cursor:grabbing}
+  .stage canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block}
+  .hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font:400 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;color:var(--muted);pointer-events:none}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+  .zoom-ctl{position:absolute;right:16px;top:8px;z-index:6;display:flex;flex-direction:column;gap:6px}
+  .zoom-ctl button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.75);color:var(--ink);
+    font:500 16px/1 "IBM Plex Mono",ui-monospace,monospace;cursor:pointer;display:grid;place-items:center;padding:0}
+  .zoom-ctl button#zoomReset{font-size:11px}
+  .zoom-ctl button:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+  .fact{display:flex;flex-direction:column;gap:4px;padding:14px 0 4px}
+  .fact + .fact{padding-left:14px;border-left:1px solid var(--line)}
+  .fact b{font:500 18px/1.1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .fact b.word{font:700 17px/1.1 "Gowun Batang",serif;letter-spacing:-.01em}
+  .fact b small{font-size:12px;color:var(--muted);margin-left:2px}
+  .fact span{font-size:12px;color:var(--muted)}
+  .fallback[hidden]{display:none}
+  .fallback{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+  .tune-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));z-index:20;
+    display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:999px;border:1px solid var(--line);
+    background:var(--ink);color:#fff;font:500 13px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;cursor:pointer;
+    box-shadow:0 6px 18px rgba(28,42,33,.18)}
+  .save-btn{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));z-index:20;
+    padding:11px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    font:500 13px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;cursor:pointer;box-shadow:0 6px 18px rgba(28,42,33,.10)}
+  .save-btn:disabled{opacity:.5;cursor:default}
+  .save-btn:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(72px + env(safe-area-inset-bottom, 0px));z-index:25;
+    max-width:calc(100% - 32px);box-sizing:border-box;padding:9px 14px;border-radius:10px;background:var(--ink);color:#fff;font-size:12px;text-align:center}
+  .tune-btn:focus-visible,.sheet button:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+  .tune-btn[aria-expanded="true"]{background:#fff;color:var(--ink)}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:15;height:46vh;overflow-y:auto;background:rgba(255,248,222,.97);
+    border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(28,42,33,.08);
+    padding:14px 20px calc(76px + env(safe-area-inset-bottom, 0px));box-sizing:border-box;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  body.tuning header, body.tuning .facts, body.tuning .hint{visibility:hidden}
+  body.tuning .stage{position:fixed;left:0;right:0;top:env(safe-area-inset-top, 0px);height:calc(54vh - env(safe-area-inset-top, 0px));min-height:0;z-index:5;background:var(--bg)}
+  .sheet-inner{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .grp{display:flex;flex-direction:column;gap:10px}
+  .grp h2{margin:0;font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+  .row label{font-size:13px}
+  .row output{font:400 12px/1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .row input[type=range]{grid-column:1 / -1;width:100%;margin:0;accent-color:var(--pink);height:22px}
+  .colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .swatch{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+  .swatch input{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;background:#fff;cursor:pointer}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .actions button{flex:1;min-width:120px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+  .actions button:disabled{opacity:.45;cursor:default}
+  .actions button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .status{font-size:12px;color:var(--muted);min-height:1em}
+  .dump{width:100%;box-sizing:border-box;font:400 11px/1.4 "IBM Plex Mono",ui-monospace,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Turnip · <i>Brassica rapa</i></div>
+    <h1>순<span>무</span></h1>
+  </header>
+
+  <div class="stage" id="stage" aria-label="회전하는 3D 순무">
+    <div class="fallback" id="fallback" hidden>이 기기에서는 3D를 표시할 수 없어요</div>
+    <div class="hint">밀어서 돌리고, 두 손가락으로 확대해 보세요</div>
+    <div class="zoom-ctl" role="group" aria-label="확대">
+      <button type="button" id="zoomIn" aria-label="확대">+</button>
+      <button type="button" id="zoomOut" aria-label="축소">−</button>
+      <button type="button" id="zoomReset" aria-label="원래 크기">1×</button>
+    </div>
+  </div>
+
+  <section class="facts" aria-label="순무 정보">
+    <div class="fact"><b>40–60<small>일</small></b><span>파종부터 수확</span></div>
+    <div class="fact"><b class="word">작은 행복</b><span>꽃말</span></div>
+    <div class="fact"><b>15–20<small>°C</small></b><span>생육 적온</span></div>
+  </section>
+</div>
+
+<button class="save-btn" id="saveBtn" type="button" hidden>이미지 저장</button>
+<div class="toast" id="toast" role="status" hidden></div>
+<button class="tune-btn" id="tuneBtn" aria-expanded="false" aria-controls="sheet">순무 디자인하기</button>
+<aside class="sheet" id="sheet" hidden aria-label="순무 디자인하기">
+  <div class="sheet-inner" id="controls"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  // ---------- Tunable parameters ----------
+  const DEFAULTS = {
+    width: 1.01, waistY: 0.31, topH: 0.65, topRound: 0.67, lowLen: 1.27, belly: 2.65, tip: 0.9, rootLen: 0.7,
+    edgeY: -0.24, edgeSoft: 0.06, edgeWave: 0.035,
+    streak: 0.45, bleed: 0, density: 1.0, ridge: 0.003,
+    pink: '#c83c74', white: '#f9f1e1', leaf: '#1b4a26',
+    leafCount: 9, leafSize: 1.33, stemH: 0.9, speed: 0.2
+  };
+  const SPEC = [
+    ['몸통 모양', [
+      ['width','몸통 폭',0.6,1.4,0.01],
+      ['waistY','가장 넓은 지점 높이',-0.4,0.8,0.01],
+      ['topH','윗면 높이 (작을수록 납작)',0.15,1.1,0.01],
+      ['topRound','윗면 둥글기',0.25,1.0,0.01],
+      ['lowLen','아랫부분 길이',0.5,2.2,0.01],
+      ['belly','아랫배 볼륨',1.0,4.0,0.05],
+      ['tip','끝 뾰족함',0.4,2.5,0.05],
+      ['rootLen','꼬리뿌리 길이',0.1,1.6,0.01]
+    ]],
+    ['색 경계', [
+      ['edgeY','분홍 경계 높이',-1.2,0.8,0.01],
+      ['edgeSoft','경계 부드러움',0.005,0.35,0.005],
+      ['edgeWave','경계 물결',0,0.12,0.005]
+    ]],
+    ['줄무늬', [
+      ['streak','줄무늬 진하기',0,1,0.01],
+      ['bleed','분홍 띠 번짐 길이',0,0.8,0.01],
+      ['density','줄무늬 촘촘함',0.4,2.5,0.05],
+      ['ridge','표면 결',0,0.03,0.001]
+    ]],
+    ['색', 'colors'],
+    ['잎', [
+      ['leafCount','잎 개수',3,10,1],
+      ['leafSize','잎 크기',0.4,1.6,0.01],
+      ['stemH','줄기 길이',0.3,1.6,0.01]
+    ]],
+    ['회전', [
+      ['speed','회전 속도',0,3,0.05]
+    ]]
+  ];
+  // My saved design lives in this browser only. Unknown or broken values fall back to defaults,
+  // so adding new sliders later never wipes a saved design.
+  const KEY = 'turnip-design';
+  function readSaved(){
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (!raw || typeof raw !== 'object') return null;
+      const out = {};
+      Object.keys(DEFAULTS).forEach(k => {
+        const d = DEFAULTS[k], v = raw[k];
+        if (typeof d === 'number' && typeof v === 'number' && isFinite(v)) out[k] = v;
+        else if (typeof d === 'string' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) out[k] = v;
+      });
+      return Object.keys(out).length ? out : null;
+    } catch(e){ return null; }
+  }
+  function writeSaved(obj){ try { localStorage.setItem(KEY, JSON.stringify(obj)); return true; } catch(e){ return false; } }
+  function clearSaved(){ try { localStorage.removeItem(KEY); } catch(e){} }
+  const savedAtLoad = readSaved();
+  let P = Object.assign({}, DEFAULTS, savedAtLoad || {});
+
+  const stage = document.getElementById('stage');
+  if (!window.THREE) { document.getElementById('fallback').hidden = false; return; }
+
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:false}); }
+  catch(e){ document.getElementById('fallback').hidden = false; return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0xffe699, 1);
+  stage.prepend(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+  camera.position.set(0, 1.1, 8.2);
+  camera.lookAt(0, 0.55, 0);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xeef1ee, 0.95));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(3, 5, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xffe6ee, 0.45);
+  rim.position.set(-4, 2, -3); scene.add(rim);
+
+  const BASE_Y = -0.4;
+  const radish = new THREE.Group();
+  radish.position.y = BASE_Y;
+  scene.add(radish);
+
+  // ---------- Materials ----------
+  const bodyMat = new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.32, metalness:0});
+  const rootMat = new THREE.MeshStandardMaterial({color:0xf2ede6, roughness:0.6});
+  const stemMat = new THREE.MeshStandardMaterial({color:0x1d4a26, roughness:0.5});
+  const leafMat = new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.6, side:THREE.DoubleSide});
+
+  function leafGeometry(L, W, seed, base){
+    const U = 14, V = 30;
+    const g = new THREE.BufferGeometry();
+    const Pp = [], C = [], I = [];
+    const mid = base.clone();
+    const dark = base.clone().multiplyScalar(0.55);
+    const rib = base.clone().lerp(new THREE.Color(0x8fcf7f), 0.35);
+    for (let j = 0; j <= V; j++) {
+      const t = j / V;
+      let w = W * Math.sin(Math.PI * Math.pow(t, 0.75));
+      w *= 1 + 0.12 * Math.sin(t * 22 + seed);
+      if (t < 0.12) w *= t / 0.12;
+      for (let i = 0; i <= U; i++) {
+        const u = i / U * 2 - 1;
+        const z = -0.32 * t * t * L + 0.18 * u * u * w + 0.025 * Math.sin(t * 30 + u * 3 + seed);
+        Pp.push(u * w, t * L, z);
+        const col = mid.clone().lerp(dark, Math.abs(u) * 0.8);
+        if (Math.abs(u) < 0.08) col.lerp(rib, 0.6);
+        C.push(col.r, col.g, col.b);
+      }
+    }
+    for (let j = 0; j < V; j++) for (let i = 0; i < U; i++) {
+      const a = j*(U+1)+i, b = a+1, d = a+U+1, e = d+1;
+      I.push(a,d,b, b,d,e);
+    }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(Pp,3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(C,3));
+    g.setIndex(I);
+    g.computeVertexNormals();
+    return g;
+  }
+
+  // periodic 1D noise around the body (seeded, so the pattern stays put)
+  function streakNoise(seed, fMin, fMax, n){
+    let t = seed * 9301 + 49297;
+    const rnd = () => { t = (t * 9301 + 49297) % 233280; return t / 233280; };
+    const terms = [];
+    let norm = 0;
+    for (let i = 0; i < n; i++) {
+      const f = Math.max(1, Math.round(fMin + (fMax - fMin) * rnd()));
+      const amp = 1 / Math.sqrt(f) * (0.5 + rnd());
+      terms.push([f, amp, rnd() * Math.PI * 2]); norm += amp;
+    }
+    norm *= 0.45;
+    return a => { let v = 0; for (const [f, amp, ph] of terms) v += amp * Math.sin(f * a + ph); return Math.max(-1, Math.min(1, v / norm)); };
+  }
+
+  let bottomY = -1.8;
+  function build(){
+    // clear previous meshes
+    for (let i = radish.children.length - 1; i >= 0; i--) {
+      const m = radish.children[i]; m.geometry && m.geometry.dispose(); radish.remove(m);
+    }
+    const Rw = P.width, yW = P.waistY, yTop = yW + P.topH, yNeck = yW - P.lowLen, yBot = yNeck - P.rootLen;
+    bottomY = yBot;
+    const rootR = 0.2 * Math.min(1, Rw);
+    function radiusAt(y){
+      let rb;
+      if (y >= yW) {
+        const q = (y - yW) / (yTop - yW);
+        rb = Rw * Math.pow(Math.max(0, 1 - q * q), P.topRound);
+      } else {
+        const t = Math.min(1, (yW - y) / (yW - yNeck));
+        rb = Rw * Math.pow(Math.max(0, 1 - Math.pow(t, P.belly)), P.tip);
+      }
+      const span = Math.max(0.05, yNeck + 0.35 - yBot);
+      let rt = 0.012 + rootR * Math.pow(Math.min(1, Math.max(0, (y - yBot) / span)), 1.6);
+      if (y > yNeck + 0.35) rt *= Math.max(0, 1 - (y - yNeck - 0.35) / 0.5);
+      const k = 9;
+      return Math.log(Math.exp(k * rb) + Math.exp(k * rt)) / k - Math.log(2) / k * Math.exp(-k * Math.abs(rb - rt));
+    }
+    const N = 420, prof = [];
+    for (let i = 0; i <= N; i++) {
+      const y = yBot + (i / N) * (yTop - yBot);
+      let r = radiusAt(y);
+      if (i === N) r = 0.001;
+      prof.push(new THREE.Vector2(Math.max(r, 0.001), y));
+    }
+    const geo = new THREE.LatheGeometry(prof, 360);
+    const pink = new THREE.Color(P.pink), white = new THREE.Color(P.white);
+    const crown = pink.clone().multiplyScalar(0.78);
+    const light = pink.clone().lerp(white, 0.45), deep = pink.clone().multiplyScalar(0.8);
+    const pos = geo.attributes.position, cols = new Float32Array(pos.count * 3), c = new THREE.Color();
+    const crownStart = yW + P.topH * 0.45;
+    const fine = streakNoise(7, 18 * P.density, 110 * P.density, 26);   // thin bands
+    const broad = streakNoise(3, 5 * P.density, 22 * P.density, 8);     // wider bands
+    for (let i = 0; i < pos.count; i++) {
+      const x0 = pos.getX(i), y = pos.getY(i), z0 = pos.getZ(i);
+      const r = Math.hypot(x0, z0);
+      const ang = Math.atan2(z0, x0);
+      // horizontal bands: noise along the height, gently wavy around the body
+      const yw = y + 0.045 * Math.sin(ang * 2 + 1.3) + 0.025 * Math.sin(ang * 5 + 0.4) + 0.012 * Math.sin(ang * 9);
+      const sf = fine(yw * 2.6), sb = broad(yw * 2.6);
+      const st = 0.65 * sf + 0.35 * sb;                                     // -1..1
+      const edge = P.edgeY + P.edgeWave * Math.sin(ang * 5) + P.edgeWave * 0.57 * Math.sin(ang * 11);
+      let k = THREE.MathUtils.smoothstep(y, edge - P.edgeSoft, edge + P.edgeSoft);
+      // below the edge, pink continues in some horizontal bands and thins out downward
+      if (P.bleed > 0 && y < edge) {
+        const depth = (edge - y) / P.bleed;
+        if (depth < 1) {
+          const thr = -0.6 + 1.5 * depth;
+          k = Math.max(k, THREE.MathUtils.smoothstep(st, thr - 0.3, thr + 0.3) * (1 - 0.35 * depth));
+        }
+      }
+      // streak tone inside the pink: lighter and deeper lines
+      const tone = st * P.streak;
+      const pk = pink.clone();
+      if (tone > 0) pk.lerp(light, Math.min(1, tone)); else pk.lerp(deep, Math.min(1, -tone));
+      const wh = white.clone().lerp(pink, Math.max(0, st) * P.streak * 0.08);
+      c.copy(wh).lerp(pk, k);
+      if (y > crownStart && k > 0.5) c.lerp(crown, Math.min(1, (y - crownStart) / Math.max(0.1, yTop - crownStart)) * 0.8);
+      cols[i*3] = c.r; cols[i*3+1] = c.g; cols[i*3+2] = c.b;
+      // fine surface ridges along the streaks
+      if (P.ridge > 0 && r > 0.02) {
+        const env = Math.min(1, r / 0.35);
+        const f = 1 + P.ridge * sf * env;
+        pos.setX(i, x0 * f); pos.setZ(i, z0 * f);
+      }
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    geo.computeVertexNormals();
+    radish.add(new THREE.Mesh(geo, bodyMat));
+
+    // rootlets along the lower body
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2.4 + 0.5, y0 = yW - P.lowLen * (0.55 + i * 0.09);
+      const r0 = radiusAt(y0) * 0.92;
+      const p0 = new THREE.Vector3(Math.cos(a)*r0, y0, Math.sin(a)*r0);
+      const p1 = p0.clone().add(new THREE.Vector3(Math.cos(a)*0.18, -0.12, Math.sin(a)*0.18));
+      const p2 = p1.clone().add(new THREE.Vector3(Math.cos(a+0.6)*0.12, -0.14, Math.sin(a+0.6)*0.12));
+      radish.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0,p1,p2]), 10, 0.008, 5, false), rootMat));
+    }
+
+    // stems + leaves
+    const leafBase = new THREE.Color(P.leaf);
+    stemMat.color.copy(leafBase).multiplyScalar(1.05);
+    const top = yTop - 0.02, up = new THREE.Vector3(0,1,0), n = Math.round(P.leafCount);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + (i % 2) * 0.25;
+      const spread = (0.3 + (i % 3) * 0.1) * P.leafSize;
+      const h = (P.stemH + ((i * 7) % 3) * 0.14);
+      const r = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(r.x*0.03, top - 0.05, r.z*0.03),
+        new THREE.Vector3(r.x*spread*0.35, top + h*0.45, r.z*spread*0.35),
+        new THREE.Vector3(r.x*spread, top + h, r.z*spread)
+      ]);
+      radish.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.035, 8, false), stemMat));
+      const end = curve.getPoint(1), t = curve.getTangent(1).normalize();
+      let z = up.clone().sub(t.clone().multiplyScalar(up.dot(t)));
+      if (z.lengthSq() < 1e-3) z = r.clone().negate();
+      z.normalize();
+      const x = new THREE.Vector3().crossVectors(t, z).normalize();
+      const leaf = new THREE.Mesh(leafGeometry((0.85 + (i%2)*0.15) * P.leafSize, 0.3 * P.leafSize, i*1.7, leafBase), leafMat);
+      leaf.matrixAutoUpdate = false;
+      leaf.matrix.makeBasis(x, t, z).setPosition(end.x - t.x*0.05, end.y - t.y*0.05, end.z - t.z*0.05);
+      radish.add(leaf);
+    }
+    shadow.position.y = BASE_Y + bottomY - 0.15;
+  }
+
+  // ---------- Soft floor shadow ----------
+  const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+  const sx = sc.getContext('2d');
+  const grd = sx.createRadialGradient(64,64,0,64,64,64);
+  grd.addColorStop(0,'rgba(120,88,20,0.24)'); grd.addColorStop(1,'rgba(120,88,20,0)');
+  sx.fillStyle = grd; sx.fillRect(0,0,128,128);
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6, 2.6),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc), transparent:true, depthWrite:false})
+  );
+  shadow.rotation.x = -Math.PI/2; shadow.scale.set(1,0.55,1);
+  scene.add(shadow);
+
+  build();
+
+  // ---------- Tuning panel ----------
+  const controls = document.getElementById('controls');
+  const outputs = {}, inputs = {};
+  const fmt = (k, v) => SPEC_STEP[k] >= 1 ? String(Math.round(v)) : Number(v).toFixed(SPEC_STEP[k] < 0.01 ? 3 : 2);
+  const SPEC_STEP = {};
+  let pending = false;
+  const schedule = () => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; build(); }); };
+
+  SPEC.forEach(([title, items]) => {
+    const grp = document.createElement('div'); grp.className = 'grp';
+    const h = document.createElement('h2'); h.textContent = title; grp.appendChild(h);
+    if (items === 'colors') {
+      const wrap = document.createElement('div'); wrap.className = 'colors';
+      [['pink','윗부분'],['white','아랫부분'],['leaf','잎·줄기']].forEach(([k, lab]) => {
+        const l = document.createElement('label'); l.className = 'swatch'; l.htmlFor = 't-' + k;
+        l.textContent = lab;
+        const inp = document.createElement('input'); inp.type = 'color'; inp.id = 't-' + k; inp.value = P[k];
+        inp.addEventListener('input', () => { P[k] = inp.value; schedule(); });
+        inputs[k] = inp; l.appendChild(inp); wrap.appendChild(l);
+      });
+      grp.appendChild(wrap);
+    } else {
+      items.forEach(([k, lab, min, max, step]) => {
+        SPEC_STEP[k] = step;
+        const row = document.createElement('div'); row.className = 'row';
+        const l = document.createElement('label'); l.htmlFor = 't-' + k; l.textContent = lab;
+        const o = document.createElement('output'); o.htmlFor = 't-' + k;
+        const inp = document.createElement('input'); inp.type = 'range'; inp.id = 't-' + k;
+        inp.min = min; inp.max = max; inp.step = step; inp.value = P[k];
+        o.textContent = fmt(k, P[k]);
+        inp.addEventListener('input', () => { P[k] = parseFloat(inp.value); o.textContent = fmt(k, P[k]); schedule(); });
+        outputs[k] = o; inputs[k] = inp;
+        row.append(l, o, inp); grp.appendChild(row);
+      });
+    }
+    controls.appendChild(grp);
+  });
+
+  const actions = document.createElement('div'); actions.className = 'actions';
+  const mkBtn = (label, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; return b; };
+  const keepBtn = mkBtn('이 모양 저장', 'primary');
+  const loadBtn = mkBtn('저장한 모양 불러오기');
+  const resetBtn = mkBtn('처음 값으로');
+  const copyBtn = mkBtn('설정값 복사');
+  const forgetBtn = mkBtn('저장한 모양 지우기');
+  actions.append(keepBtn, loadBtn, resetBtn, copyBtn, forgetBtn);
+  const syncSavedUI = () => { const has = !!readSaved(); loadBtn.disabled = !has; forgetBtn.disabled = !has; };
+  const applyAll = () => {
+    Object.keys(inputs).forEach(k => { inputs[k].value = P[k]; if (outputs[k]) outputs[k].textContent = fmt(k, P[k]); });
+    build();
+  };
+  const status = document.createElement('div'); status.className = 'status'; status.setAttribute('role','status');
+  const dump = document.createElement('textarea'); dump.className = 'dump'; dump.id = 't-dump'; dump.rows = 4; dump.readOnly = true; dump.hidden = true;
+  controls.append(actions, status, dump);
+
+  keepBtn.addEventListener('click', () => {
+    if (writeSaved(P)) { status.textContent = '저장했어요. 이 브라우저에서 다시 열면 이 모양으로 시작해요'; }
+    else { status.textContent = '이 브라우저에서는 저장할 수 없어요. 설정값 복사로 값을 따로 보관해 주세요'; }
+    syncSavedUI();
+  });
+  loadBtn.addEventListener('click', () => {
+    const sv = readSaved();
+    if (!sv) { status.textContent = '저장한 모양이 없어요'; syncSavedUI(); return; }
+    P = Object.assign({}, DEFAULTS, sv); applyAll();
+    status.textContent = '저장한 모양을 불러왔어요';
+  });
+  resetBtn.addEventListener('click', () => {
+    P = Object.assign({}, DEFAULTS); applyAll();
+    status.textContent = '처음 값으로 되돌렸어요. 저장한 모양은 그대로 있어요';
+  });
+  forgetBtn.addEventListener('click', () => {
+    if (forgetBtn.dataset.armed !== '1') {
+      forgetBtn.dataset.armed = '1'; forgetBtn.textContent = '한 번 더 누르면 지워요';
+      setTimeout(() => { forgetBtn.dataset.armed = ''; forgetBtn.textContent = '저장한 모양 지우기'; }, 3000);
+      return;
+    }
+    clearSaved(); forgetBtn.dataset.armed = ''; forgetBtn.textContent = '저장한 모양 지우기';
+    status.textContent = '저장한 모양을 지웠어요. 다음에 열면 처음 값으로 시작해요';
+    syncSavedUI();
+  });
+  syncSavedUI();
+  if (savedAtLoad) status.textContent = '저장한 모양으로 열었어요';
+  copyBtn.addEventListener('click', () => {
+    const text = JSON.stringify(P);
+    dump.value = text;
+    const fallback = () => { dump.hidden = false; dump.focus(); dump.select(); status.textContent = '아래 칸의 값을 길게 눌러 복사해 주세요'; };
+    try {
+      navigator.clipboard.writeText(text).then(() => { status.textContent = '복사했어요. 채팅에 붙여넣으면 이 모양으로 고정할게요'; dump.hidden = true; }, fallback);
+    } catch(e){ fallback(); }
+  });
+
+  const tuneBtn = document.getElementById('tuneBtn'), sheet = document.getElementById('sheet');
+  tuneBtn.addEventListener('click', () => {
+    const open = sheet.hidden;
+    sheet.hidden = !open;
+    tuneBtn.setAttribute('aria-expanded', String(open));
+    tuneBtn.textContent = open ? '닫기' : '순무 디자인하기';
+    document.body.classList.toggle('tuning', open);
+    requestAnimationFrame(resize);
+  });
+
+  // ---------- Save image ----------
+  const saveBtn = document.getElementById('saveBtn'), toast = document.getElementById('toast');
+  let toastTimer;
+  const showToast = (msg) => { toast.textContent = msg; toast.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.hidden = true; }, 2600); };
+  function snapshot(){
+    const W = 1080, H = 1350;
+    const prevRatio = renderer.getPixelRatio(), prevAspect = camera.aspect, prevFov = camera.fov;
+    const prevW = stage.clientWidth, prevH = stage.clientHeight;
+    renderer.setPixelRatio(1);
+    renderer.setSize(W, H, false);
+    camera.aspect = W / H; camera.fov = 34; camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffe699'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(renderer.domElement, 0, 0, W, H);
+    renderer.setPixelRatio(prevRatio);
+    renderer.setSize(prevW, prevH, false);
+    camera.aspect = prevAspect; camera.fov = prevFov; camera.updateProjectionMatrix();
+    return new Promise(res => out.toBlob(res, 'image/png'));
+  }
+  const fileName = () => {
+    const d = new Date(), pad = n => String(n).padStart(2, '0');
+    return `순무-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.png`;
+  };
+  // Plain browser download (GitHub Pages, local server, etc.)
+  function browserDownload(blob, name){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  saveBtn.hidden = false;
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    try {
+      const blob = await snapshot();
+      if (!blob) throw new Error('snapshot failed');
+      // Inside a Claude artifact the page must ask the viewer through the downloads capability.
+      const downloads = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+      if (downloads) {
+        try { await downloads.save({filename: fileName(), data: blob}); showToast('이미지를 저장했어요'); }
+        catch(err) {
+          const code = err && err.code;
+          if (code === 'declined') showToast('저장을 취소했어요');
+          else if (code === 'rate_limited') showToast('저장 창이 이미 열려 있어요. 잠시 후 다시 눌러 주세요');
+          else showToast('이 화면에서는 이미지를 저장할 수 없어요');
+        }
+      } else {
+        browserDownload(blob, fileName());
+        showToast('이미지를 저장했어요');
+      }
+    } catch(e) {
+      showToast('이미지를 만들지 못했어요. 다시 눌러 주세요');
+    } finally { saveBtn.disabled = false; }
+  });
+
+  // ---------- Sizing ----------
+  function resize(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.fov = (w / h < 0.75 ? 38 : 32) + (document.body.classList.contains('tuning') ? 8 : 0);
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  // ---------- Interaction ----------
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const baseSpeed = () => reduce ? Math.min(P.speed, 0.15) : P.speed;
+  let vel = baseSpeed(), dragging = false, lastX = 0, lastY = 0, lastT = 0;
+  // zoom + vertical look offset
+  const ZMIN = 1, ZMAX = 4;
+  let zoom = 1, zoomTarget = 1, panY = 0;
+  const clampZ = z => Math.max(ZMIN, Math.min(ZMAX, z));
+  const setZoom = z => { zoomTarget = clampZ(z); if (zoomTarget <= 1.001) panY = 0; };
+  const pts = new Map();
+  let pinchDist = 0, pinchZoom = 1, lastTap = 0, tapMoved = false;
+  const dist = () => { const [p1, p2] = [...pts.values()]; return Math.hypot(p1.x - p2.x, p1.y - p2.y); };
+
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.closest('.zoom-ctl')) return;
+    pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    stage.setPointerCapture(e.pointerId);
+    if (pts.size === 2) { dragging = false; pinchDist = dist(); pinchZoom = zoomTarget; return; }
+    dragging = true; tapMoved = false;
+    lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (pts.size >= 2) { if (pinchDist > 0) setZoom(pinchZoom * dist() / pinchDist); return; }
+    if (!dragging) return;
+    const now = performance.now(), dx = e.clientX - lastX, dy = e.clientY - lastY, dt = Math.max(1, now - lastT) / 1000;
+    if (Math.abs(dx) + Math.abs(dy) > 4) tapMoved = true;
+    const d = dx * 0.012;
+    radish.rotation.y += d; vel = d / dt;
+    if (zoomTarget > 1.02) panY += dy * 0.006 / zoomTarget;          // look up/down when zoomed in
+    lastX = e.clientX; lastY = e.clientY; lastT = now;
+  });
+  const endDrag = e => {
+    pts.delete(e.pointerId);
+    if (pts.size === 1) { const p = [...pts.values()][0]; lastX = p.x; lastY = p.y; lastT = performance.now(); dragging = true; tapMoved = true; return; }
+    if (pts.size === 0) {
+      if (dragging && !tapMoved && e.pointerType !== 'mouse') {           // double tap resets zoom
+        const now = performance.now();
+        if (now - lastTap < 320) { setZoom(zoomTarget > 1.05 ? 1 : 2); lastTap = 0; } else lastTap = now;
+      }
+      dragging = false;
+    }
+  };
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('dblclick', e => { if (!e.target.closest('.zoom-ctl')) setZoom(zoomTarget > 1.05 ? 1 : 2); });
+  stage.addEventListener('wheel', e => { e.preventDefault(); setZoom(zoomTarget * Math.exp(-e.deltaY * 0.0015)); }, {passive:false});
+  document.getElementById('zoomIn').addEventListener('click', () => setZoom(zoomTarget * 1.35));
+  document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoomTarget / 1.35));
+  document.getElementById('zoomReset').addEventListener('click', () => setZoom(1));
+
+  function updateCamera(dt){
+    zoom += (zoomTarget - zoom) * Math.min(1, dt * 10);
+    const f = (zoom - 1) / (ZMAX - 1);
+    const maxPan = 1.4 * f + 0.2 * (zoom > 1.02 ? 1 : 0);
+    panY = Math.max(-maxPan, Math.min(maxPan, panY));
+    const ty = 0.55 + (-0.15 - 0.55) * Math.min(1, f * 2.2) + panY;   // zoom toward the body
+    camera.zoom = zoom;
+    camera.position.y = 1.1 + (ty - 0.55);
+    camera.lookAt(0, ty, 0);
+    camera.updateProjectionMatrix();
+  }
+
+  // ---------- Loop ----------
+  const clock = new THREE.Clock();
+  function tick(){
+    const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime;
+    if (!dragging) {
+      vel += (baseSpeed() - vel) * Math.min(1, dt * 1.6);
+      radish.rotation.y += vel * dt;
+    }
+    if (!reduce) {
+      radish.position.y = BASE_Y + Math.sin(time * 1.2) * 0.06;
+      radish.rotation.z = Math.sin(time * 0.8) * 0.04;
+      const s = 1 - Math.sin(time * 1.2) * 0.04;
+      shadow.scale.set(s, 0.55 * s, 1);
+    }
+    updateCamera(dt);
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+
+</body>
+</html>

@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffe699">
 <meta name="description" content="작은 행복을 꽃말로 가진 순무가 3D로 회전하는 모바일 페이지">
+<meta property="og:type" content="website">
+<meta property="og:title" content="순무">
+<meta property="og:description" content="꽃말은 작은 행복. 빙글빙글 도는 순무를 만나보세요.">
+<meta property="og:image" content="og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <title>순무</title>
 <style>
   /* base reset */
@@ -33,7 +39,11 @@
     -webkit-tap-highlight-color:transparent;
   }
   .page{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:8px;padding-block:22px calc(76px + env(safe-area-inset-bottom, 0px));box-sizing:border-box}
-  header{display:flex;flex-direction:column;gap:6px}
+  header{position:relative;display:flex;flex-direction:column;gap:6px}
+  .share-btn{position:absolute;right:0;top:0;display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;
+    border:1px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+  .share-btn svg{width:16px;height:16px;flex:none}
+  .share-btn:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
   .eyebrow{font:500 11px/1.4 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
   .eyebrow i{font-style:italic;text-transform:none;letter-spacing:.02em}
   h1{margin:0;font:700 clamp(44px,14vw,64px)/1 "Gowun Batang",serif;letter-spacing:-.02em;text-wrap:balance}
@@ -98,6 +108,10 @@
   <header>
     <div class="eyebrow">Turnip · <i>Brassica rapa</i></div>
     <h1>순<span>무</span></h1>
+    <button class="share-btn" id="shareBtn" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5C6.8 3.5 2.5 6.8 2.5 10.9c0 2.6 1.7 4.9 4.3 6.2l-.9 3.4c-.1.3.3.6.6.4l4-2.7c.5.1 1 .1 1.5.1 5.2 0 9.5-3.3 9.5-7.4S17.2 3.5 12 3.5z"/></svg>
+      카톡 공유
+    </button>
   </header>
 
   <div class="stage" id="stage" aria-label="회전하는 3D 순무">
@@ -651,5 +665,60 @@
 })();
 </script>
 
+
+<!-- 카카오톡 공유 -->
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+  // Kakao Developers > 내 애플리케이션 > 앱 키 > JavaScript 키를 넣으세요.
+  // 비워 두면 휴대폰 기본 공유창(카카오톡 포함)이나 링크 복사로 동작합니다.
+  const KAKAO_JS_KEY = '';
+
+  const btn = document.getElementById('shareBtn');
+  const toast = document.getElementById('toast');
+  const say = msg => { toast.textContent = msg; toast.hidden = false; clearTimeout(say.t); say.t = setTimeout(() => { toast.hidden = true; }, 2600); };
+
+  const pageUrl = () => location.href.split('#')[0];
+  const TITLE = '순무';
+  const TEXT = '꽃말은 작은 행복. 빙글빙글 도는 순무를 만나보세요.';
+
+  let kakaoReady = false;
+  try {
+    if (KAKAO_JS_KEY && window.Kakao) {
+      if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
+      kakaoReady = Kakao.isInitialized();
+    }
+  } catch(e){ kakaoReady = false; }
+
+  async function copyLink(){
+    try { await navigator.clipboard.writeText(pageUrl()); say('링크를 복사했어요. 카카오톡에 붙여넣어 주세요'); }
+    catch(e){ say('링크: ' + pageUrl()); }
+  }
+
+  btn.addEventListener('click', async () => {
+    const url = pageUrl();
+    if (kakaoReady) {
+      try {
+        Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: TITLE,
+            description: TEXT,
+            imageUrl: new URL('og.png', url).href,
+            link: { mobileWebUrl: url, webUrl: url }
+          },
+          buttons: [{ title: '순무 보러 가기', link: { mobileWebUrl: url, webUrl: url } }]
+        });
+        return;
+      } catch(e){ /* fall through */ }
+    }
+    if (navigator.share) {
+      try { await navigator.share({ title: TITLE, text: TEXT, url }); return; }
+      catch(e){ if (e && e.name === 'AbortError') return; }
+    }
+    copyLink();
+  });
+})();
+</script>
 </body>
 </html>
